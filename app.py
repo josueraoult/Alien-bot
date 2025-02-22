@@ -79,14 +79,19 @@ def send_welcome_message(sender_id):
 # ✅ Obtenir la réponse de l'IA
 def get_ai_response(user_message):
     try:
-        response = requests.get(f"https://api.zetsu.xyz/gemini?prompt={user_message}")
+        url = f"https://api.zetsu.xyz/gemini?prompt={user_message}"
+        response = requests.get(url)
         data = response.json()
 
-        return data.get("message", "Je n'ai pas compris. Peux-tu reformuler ?")
-    except Exception as e:
-        print("Erreur API :", e)
-        return "Une erreur est survenue, réessaie plus tard."
+        print("🔍 Réponse brute de l'API :", data)  # Ajoute cette ligne pour voir la réponse exacte
 
+        if "message" in data:
+            return data["message"]
+        else:
+            return "⚠️ L'API n'a pas répondu correctement."
+    except Exception as e:
+        print("🚨 Erreur API :", e)
+        return "❌ Une erreur est survenue, réessaie plus tard."
 # ✅ Envoi d'un message simple
 def send_message(sender_id, text):
     message_data = {
