@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: AlienBot
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
