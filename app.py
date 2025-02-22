@@ -83,15 +83,16 @@ def get_ai_response(user_message):
         response = requests.get(url)
         data = response.json()
 
-        print("🔍 Réponse brute de l'API :", data)  # Ajoute cette ligne pour voir la réponse exacte
+        print("🔍 Réponse API :", data)  # Debugging
 
-        if "message" in data:
-            return data["message"]
+        # Vérifier si la réponse contient "gemini"
+        if "gemini" in data:
+            return data["gemini"]
         else:
-            return "⚠️ L'API n'a pas répondu correctement."
+            return "⚠️ L'API a répondu, mais sans message valide."
     except Exception as e:
-        print("🚨 Erreur API :", e)
-        return "❌ Une erreur est survenue, réessaie plus tard."
+        print("❌ Erreur API :", e)
+        return "⚠️ Impossible de contacter l'IA. Réessaie plus tard."
 # ✅ Envoi d'un message simple
 def send_message(sender_id, text):
     message_data = {
