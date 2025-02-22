@@ -1,6 +1,6 @@
 services:
   - type: web
     name: AlienBot
-    env: node
-    buildCommand: npm install
-    startCommand: npm start
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -b 0.0.0.0:8080 app:app
