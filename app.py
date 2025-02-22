@@ -11,8 +11,8 @@ app = Flask(__name__)
 PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBO8tpNKrZBZAwqxa8GPyJmJaXuA5p4V7zkDWTMwN6jRMyPlnJSqoz6Vjn6qJJM8H4B5UCgWOUd9v4ODRuETjoPzugJHspq88JDfsjwNfGNyfwTP6BmllnZC0xPhr8gHocidFHXenL7z3E8boLSN8t9qhljyEP7U3x2kqIMljmtIBShZA82pdf70cRvH8eNwZDZD"
 VERIFY_TOKEN = "openofficeweb"
 
-# 🔹 Messages aléatoires pour maintenir la conversation
-randomMessages = [
+# 🔹 Messages aléatoires
+random_messages = [
     "👋 Coucou, je suis toujours en ligne ! Besoin d’aide ?",
     "🚀 Salut ! Pose-moi une question, je suis prêt à répondre.",
     "🤖 Hé ! Que puis-je faire pour toi aujourd'hui ?",
@@ -20,7 +20,7 @@ randomMessages = [
 ]
 
 # 🔹 Stocker l'activité récente des utilisateurs
-userLastActivity = {}
+user_last_activity = {}
 
 # ✅ Route principale
 @app.route("/", methods=["GET"])
@@ -36,8 +36,7 @@ def verify_webhook():
 
     if mode == "subscribe" and token == VERIFY_TOKEN:
         return challenge, 200
-    else:
-        return "Forbidden", 403
+    return "Forbidden", 403
 
 # ✅ Gestion des messages entrants
 @app.route("/webhook", methods=["POST"])
@@ -46,50 +45,44 @@ def handle_messages():
 
     if body.get("object") == "page":
         for entry in body["entry"]:
-            event = entry["messaging"][0]
-            sender_id = event["sender"]["id"]
+            for event in entry.get("messaging", []):
+                sender_id = event["sender"]["id"]
 
-            # Si l'utilisateur envoie un message texte
-            if "message" in event and "text" in event["message"]:
-                user_message = event["message"]["text"]
+                # 🔹 Détection du bouton "Démarrer"
+                if event.get("postback") and event["postback"].get("payload") == "GET_STARTED":
+                    send_welcome_message(sender_id)
+                    continue
 
-                # Actions utilisateur : marquer comme lu + indiquer que le bot écrit
-                mark_message_as_seen(sender_id)
-                show_typing_indicator(sender_id)
-                userLastActivity[sender_id] = time.time()
+                # 🔹 Si l'utilisateur envoie un message texte
+                if "message" in event and "text" in event["message"]:
+                    user_message = event["message"]["text"]
 
-                # Réponse différée avec un thread pour éviter de bloquer le serveur
-                def delayed_response():
-                    bot_reply = get_ai_response(user_message)
-                    stop_typing_indicator(sender_id)
-                    send_message(sender_id, bot_reply)
+                    mark_message_as_seen(sender_id)
+                    show_typing_indicator(sender_id)
+                    user_last_activity[sender_id] = time.time()
 
-                Thread(target=delayed_response).start()
+                    # Réponse différée
+                    def delayed_response():
+                        bot_reply = get_ai_response(user_message)
+                        stop_typing_indicator(sender_id)
+                        send_message(sender_id, bot_reply)
 
-            # Si l'utilisateur démarre la conversation
-            elif "postback" in event and event["postback"].get("payload") == "GET_STARTED":
-                send_welcome_message(sender_id)
+                    Thread(target=delayed_response).start()
 
         return "EVENT_RECEIVED", 200
-    else:
-        return "Not Found", 404
+    return "Not Found", 404
 
-# ✅ Message de bienvenue pour le premier contact
+# ✅ Message de bienvenue
 def send_welcome_message(sender_id):
-    send_message(sender_id, "Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?")
+    send_message(sender_id, "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?")
 
-# ✅ Obtenir la réponse de l'IA via l'API Mixtral
+# ✅ Obtenir la réponse de l'IA
 def get_ai_response(user_message):
     try:
-        url = f"https://api.zetsu.xyz/gemini?prompt={user_message}"
-        response = requests.get(url)
+        response = requests.get(f"https://api.zetsu.xyz/gemini?prompt={user_message}")
         data = response.json()
 
-        # Vérifier si l'API a répondu correctement
-        if data.get("status") and "result" in data:
-            return data["result"]
-        else:
-            return "Je n'ai pas compris. Peux-tu reformuler ?"
+        return data.get("message", "Je n'ai pas compris. Peux-tu reformuler ?")
     except Exception as e:
         print("Erreur API :", e)
         return "Une erreur est survenue, réessaie plus tard."
@@ -102,46 +95,62 @@ def send_message(sender_id, text):
     }
     send_message_to_facebook(message_data)
 
-# ✅ Message aléatoire après une longue inactivité
+# ✅ Message automatique après inactivité
 def send_online_status_message(sender_id):
-    random_msg = random.choice(randomMessages)
+    random_msg = random.choice(random_messages)
     send_message(sender_id, random_msg)
 
 # ✅ Actions utilisateur (vu, écriture...)
 def mark_message_as_seen(sender_id):
-    message_data = {"recipient": {"id": sender_id}, "sender_action": "mark_seen"}
-    send_message_to_facebook(message_data)
+    send_action(sender_id, "mark_seen")
 
 def show_typing_indicator(sender_id):
-    message_data = {"recipient": {"id": sender_id}, "sender_action": "typing_on"}
-    send_message_to_facebook(message_data)
+    send_action(sender_id, "typing_on")
 
 def stop_typing_indicator(sender_id):
-    message_data = {"recipient": {"id": sender_id}, "sender_action": "typing_off"}
+    send_action(sender_id, "typing_off")
+
+def send_action(sender_id, action):
+    message_data = {"recipient": {"id": sender_id}, "sender_action": action}
     send_message_to_facebook(message_data)
 
-# ✅ Envoyer une requête à l'API Messenger pour envoyer un message
+# ✅ Envoyer un message à l'API Messenger
 def send_message_to_facebook(message_data):
     try:
         url = f"https://graph.facebook.com/v12.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
-        requests.post(url, json=message_data)
-    except Exception as e:
+        response = requests.post(url, json=message_data)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
         print("Erreur d'envoi :", e)
 
-# ✅ Vérification toutes les heures pour envoyer un message automatique
+# ✅ Activer le bouton "Démarrer" dans Messenger
+def setup_get_started_button():
+    url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
+    payload = {
+        "get_started": {"payload": "GET_STARTED"}
+    }
+    try:
+        response = requests.post(url, json=payload)
+        print("Configuration du bouton Démarrer :", response.json())
+    except Exception as e:
+        print("Erreur de configuration :", e)
+
+# ✅ Vérification des utilisateurs inactifs
 def check_user_activity():
     while True:
         now = time.time()
-        for user_id in list(userLastActivity.keys()):
-            if now - userLastActivity[user_id] > 3600:  
-                send_online_status_message(user_id)
-                del userLastActivity[user_id]
+        inactive_users = [user_id for user_id in user_last_activity if now - user_last_activity[user_id] > 3600]
+        
+        for user_id in inactive_users:
+            send_online_status_message(user_id)
+            del user_last_activity[user_id]
+        
         time.sleep(60)
 
-# Lancer la vérification en arrière-plan
+# 🚀 Lancer les tâches en arrière-plan
 Thread(target=check_user_activity, daemon=True).start()
 
-# ✅ Lancer le serveur Flask
 if __name__ == "__main__":
+    setup_get_started_button()  # Active le bouton "Démarrer"
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
