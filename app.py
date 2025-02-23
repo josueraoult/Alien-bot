@@ -11,21 +11,21 @@ app = Flask(__name__)
 PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBO8tpNKrZBZAwqxa8GPyJmJaXuA5p4V7zkDWTMwN6jRMyPlnJSqoz6Vjn6qJJM8H4B5UCgWOUd9v4ODRuETjoPzugJHspq88JDfsjwNfGNyfwTP6BmllnZC0xPhr8gHocidFHXenL7z3E8boLSN8t9qhljyEP7U3x2kqIMljmtIBShZA82pdf70cRvH8eNwZDZD"
 VERIFY_TOKEN = "openofficeweb"
 
-# 🔹 Messages aléatoires
+# 🔹 Messages aléatoires après 1h d'inactivité
 random_messages = [
     "👋 Coucou, je suis toujours en ligne ! Besoin d’aide ?",
     "🚀 Salut ! Pose-moi une question, je suis prêt à répondre.",
-    "🤖 Hé ! Que puis-je faire pour toi aujourd’hui ?",
+    "🤖 Hé ! Que puis-je faire pour toi aujourd'hui ?",
     "🔥 Toujours là si tu as besoin d’aide !",
 ]
 
-# 🔹 Stocker l’activité récente des utilisateurs
+# 🔹 Stocker l'activité récente des utilisateurs
 user_last_activity = {}
 
 # ✅ Route principale
 @app.route("/", methods=["GET"])
 def home():
-    return "🚀 Alien Bot AI fonctionne !"
+    return "🚀 Alien Bot AI fonctionne ! Le serveur est en ligne."
 
 # ✅ Vérification du webhook pour Messenger
 @app.route("/webhook", methods=["GET"])
@@ -53,7 +53,7 @@ def handle_messages():
                     send_welcome_message(sender_id)
                     continue
 
-                # 🔹 Si l’utilisateur envoie un message texte
+                # 🔹 Si l'utilisateur envoie un message texte
                 if "message" in event and "text" in event["message"]:
                     user_message = event["message"]["text"]
 
@@ -72,29 +72,50 @@ def handle_messages():
         return "EVENT_RECEIVED", 200
     return "Not Found", 404
 
-# ✅ Message de bienvenue avec image
+# ✅ Message de bienvenue avec bouton et image
 def send_welcome_message(sender_id):
     message_data = {
         "recipient": {"id": sender_id},
         "message": {
             "attachment": {
-                "type": "image",
+                "type": "template",
                 "payload": {
-                    "url": "https://imgur.com/a/NHgkX4N",
-                    "is_reusable": True
+                    "template_type": "generic",
+                    "elements": [
+                        {
+                            "title": "👋 Bienvenue sur Alien Bot AI !",
+                            "image_url": "https://your-image-url.com/welcome.jpg",
+                            "subtitle": "Cliquez sur le bouton ci-dessous pour voir My Boss.",
+                            "buttons": [
+                                {
+                                    "type": "web_url",
+                                    "url": "https://www.facebook.com/profile.php?id=61573695652333",
+                                    "title": "My Boss"
+                                }
+                            ]
+                        }
+                    ]
                 }
             }
         }
     }
     send_message_to_facebook(message_data)
 
-    text_message = {
-        "recipient": {"id": sender_id},
-        "message": {"text": "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?"}
-    }
-    send_message_to_facebook(text_message)
+# ✅ Obtenir la réponse de l'IA
+def get_ai_response(user_message):
+    try:
+        url = f"https://api.zetsu.xyz/gemini?prompt={user_message}"
+        response = requests.get(url)
+        data = response.json()
 
-# ✅ Envoi d’un message simple
+        print("🔍 Réponse API :", data)  # Debugging
+
+        return data.get("gemini", "⚠️ L'IA n'a pas pu répondre.")
+    except Exception as e:
+        print("❌ Erreur API :", e)
+        return "⚠️ Impossible de contacter l'IA. Réessaie plus tard."
+
+# ✅ Envoi d'un message simple
 def send_message(sender_id, text):
     message_data = {
         "recipient": {"id": sender_id},
@@ -107,7 +128,7 @@ def send_online_status_message(sender_id):
     random_msg = random.choice(random_messages)
     send_message(sender_id, random_msg)
 
-# ✅ Actions utilisateur (vu, écriture…)
+# ✅ Actions utilisateur (vu, écriture...)
 def mark_message_as_seen(sender_id):
     send_action(sender_id, "mark_seen")
 
@@ -121,20 +142,26 @@ def send_action(sender_id, action):
     message_data = {"recipient": {"id": sender_id}, "sender_action": action}
     send_message_to_facebook(message_data)
 
-# ✅ Envoyer un message à l’API Messenger
+# ✅ Envoyer un message à l'API Messenger
 def send_message_to_facebook(message_data):
     try:
         url = f"https://graph.facebook.com/v12.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
         response = requests.post(url, json=message_data)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print("Erreur d’envoi :", e)
+        print("Erreur d'envoi :", e)
 
-# ✅ Activer le bouton "Démarrer" et le menu persistant avec image
+# ✅ Activer le bouton "Démarrer" et le message de bienvenue
 def setup_messenger_profile():
     url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
     payload = {
         "get_started": {"payload": "GET_STARTED"},
+        "greeting": [
+            {
+                "locale": "default",
+                "text": "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?"
+            }
+        ],
         "persistent_menu": [
             {
                 "locale": "default",
@@ -142,24 +169,17 @@ def setup_messenger_profile():
                 "call_to_actions": [
                     {
                         "type": "web_url",
-                        "title": "💼 My Boss",
+                        "title": "My Boss",
                         "url": "https://www.facebook.com/profile.php?id=61573695652333",
                         "webview_height_ratio": "full"
-                    },
-                    {
-                        "type": "postback",
-                        "title": "📷 Voir l’image",
-                        "payload": "VIEW_IMAGE"
                     }
                 ]
             }
         ]
     }
-    try:
-        response = requests.post(url, json=payload)
-        print("Configuration Messenger :", response.json())
-    except Exception as e:
-        print("Erreur de configuration :", e)
+
+    response = requests.post(url, json=payload)
+    print("Configuration Messenger Profile :", response.json())
 
 # ✅ Vérification des utilisateurs inactifs
 def check_user_activity():
@@ -177,6 +197,6 @@ def check_user_activity():
 Thread(target=check_user_activity, daemon=True).start()
 
 if __name__ == "__main__":
-    setup_messenger_profile()  # Active le bouton "Démarrer" et le menu
+    setup_messenger_profile()  # Active le bouton "Démarrer" et le message de bienvenue
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
