@@ -8,8 +8,8 @@ from threading import Thread
 app = Flask(__name__)
 
 # 🔹 Configuration des tokens
-PAGE_ACCESS_TOKEN = "TON_ACCESS_TOKEN_ICI"
-VERIFY_TOKEN = "TON_VERIFY_TOKEN_ICI"
+PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBO8tpNKrZBZAwqxa8GPyJmJaXuA5p4V7zkDWTMwN6jRMyPlnJSqoz6Vjn6qJJM8H4B5UCgWOUd9v4ODRuETjoPzugJHspq88JDfsjwNfGNyfwTP6BmllnZC0xPhr8gHocidFHXenL7z3E8boLSN8t9qhljyEP7U3x2kqIMljmtIBShZA82pdf70cRvH8eNwZDZD"
+VERIFY_TOKEN = "openofficeweb"
 
 # 🔹 Messages aléatoires
 random_messages = [
