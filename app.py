@@ -11,7 +11,7 @@ app = Flask(__name__)
 PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBO8tpNKrZBZAwqxa8GPyJmJaXuA5p4V7zkDWTMwN6jRMyPlnJSqoz6Vjn6qJJM8H4B5UCgWOUd9v4ODRuETjoPzugJHspq88JDfsjwNfGNyfwTP6BmllnZC0xPhr8gHocidFHXenL7z3E8boLSN8t9qhljyEP7U3x2kqIMljmtIBShZA82pdf70cRvH8eNwZDZD"
 VERIFY_TOKEN = "openofficeweb"
 
-# 🔹 Messages aléatoires
+# 🔹 Messages aléatoires après 1h d'inactivité
 random_messages = [
     "👋 Coucou, je suis toujours en ligne ! Besoin d’aide ?",
     "🚀 Salut ! Pose-moi une question, je suis prêt à répondre.",
@@ -72,9 +72,34 @@ def handle_messages():
         return "EVENT_RECEIVED", 200
     return "Not Found", 404
 
-# ✅ Message de bienvenue
+# ✅ Message de bienvenue avec bouton et image
 def send_welcome_message(sender_id):
-    send_message(sender_id, "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?")
+    message_data = {
+        "recipient": {"id": sender_id},
+        "message": {
+            "attachment": {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": [
+                        {
+                            "title": "👋 Bienvenue sur Alien Bot AI !",
+                            "image_url": "https://imgur.com/a/NHgkX4N",
+                            "subtitle": "Visit My Boss.🧑‍💻",
+                            "buttons": [
+                                {
+                                    "type": "web_url",
+                                    "url": "https://www.facebook.com/profile.php?id=61573695652333",
+                                    "title": "My Boss"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+    send_message_to_facebook(message_data)
 
 # ✅ Obtenir la réponse de l'IA
 def get_ai_response(user_message):
@@ -85,14 +110,11 @@ def get_ai_response(user_message):
 
         print("🔍 Réponse API :", data)  # Debugging
 
-        # Vérifier si la réponse contient "gemini"
-        if "gemini" in data:
-            return data["gemini"]
-        else:
-            return "⚠️ L'API a répondu, mais sans message valide."
+        return data.get("gemini", "⚠️ L'IA n'a pas pu répondre.")
     except Exception as e:
         print("❌ Erreur API :", e)
         return "⚠️ Impossible de contacter l'IA. Réessaie plus tard."
+
 # ✅ Envoi d'un message simple
 def send_message(sender_id, text):
     message_data = {
@@ -129,34 +151,52 @@ def send_message_to_facebook(message_data):
     except requests.exceptions.RequestException as e:
         print("Erreur d'envoi :", e)
 
-# ✅ Activer le bouton "Démarrer" dans Messenger
-def setup_get_started_button():
+# ✅ Activer le bouton "Démarrer" et le message de bienvenue
+def setup_messenger_profile():
     url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
     payload = {
-        "get_started": {"payload": "GET_STARTED"}
+        "get_started": {"payload": "GET_STARTED"},
+        "greeting": [
+            {
+                "locale": "default",
+                "text": "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?"
+            }
+        ],
+        "persistent_menu": [
+            {
+                "locale": "default",
+                "composer_input_disabled": False,
+                "call_to_actions": [
+                    {
+                        "type": "web_url",
+                        "title": "My Boss",
+                        "url": "https://www.facebook.com/profile.php?id=61573695652333",
+                        "webview_height_ratio": "full"
+                    }
+                ]
+            }
+        ]
     }
-    try:
-        response = requests.post(url, json=payload)
-        print("Configuration du bouton Démarrer :", response.json())
-    except Exception as e:
-        print("Erreur de configuration :", e)
+
+    response = requests.post(url, json=payload)
+    print("Configuration Messenger Profile :", response.json())
 
 # ✅ Vérification des utilisateurs inactifs
 def check_user_activity():
     while True:
         now = time.time()
         inactive_users = [user_id for user_id in user_last_activity if now - user_last_activity[user_id] > 3600]
-        
+
         for user_id in inactive_users:
             send_online_status_message(user_id)
             del user_last_activity[user_id]
-        
+
         time.sleep(60)
 
 # 🚀 Lancer les tâches en arrière-plan
 Thread(target=check_user_activity, daemon=True).start()
 
 if __name__ == "__main__":
-    setup_get_started_button()  # Active le bouton "Démarrer"
+    setup_messenger_profile()  # Active le bouton "Démarrer" et le message de bienvenue
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
