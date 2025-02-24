@@ -142,6 +142,23 @@ def send_action(sender_id, action):
     message_data = {"recipient": {"id": sender_id}, "sender_action": action}
     send_message_to_facebook(message_data)
 
+# ✅ Activer la visibilité "En ligne" du bot
+def set_bot_online_status():
+    url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
+    payload = {
+        "presence_indicator": {
+            "visibility": "VISIBLE"  # Assure que le bot est affiché comme en ligne
+        }
+    }
+    try:
+        response = requests.post(url, json=payload)
+        print("🔵 Activation du statut En ligne :", response.json())
+    except Exception as e:
+        print("❌ Erreur lors de l'activation du statut En ligne :", e)
+
+# Appeler cette fonction au démarrage du bot
+set_bot_online_status()
+
 # ✅ Envoyer un message à l'API Messenger
 def send_message_to_facebook(message_data):
     try:
