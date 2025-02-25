@@ -38,7 +38,7 @@ def verify_webhook():
         return challenge, 200
     return "Forbidden", 403
 
-# ✅ Gestion des messages entrants
+# ✅ Gestion des messages entrants et des postbacks
 @app.route("/webhook", methods=["POST"])
 def handle_messages():
     body = request.get_json()
@@ -48,12 +48,12 @@ def handle_messages():
             for event in entry.get("messaging", []):
                 sender_id = event["sender"]["id"]
 
-                # 🔹 Détection du bouton "Démarrer"
-                if event.get("postback") and event["postback"].get("payload") == "GET_STARTED":
-                    send_welcome_message(sender_id)
+                # 🔹 Gestion du bouton "Démarrer"
+                if event.get("postback") and "payload" in event["postback"]:
+                    handle_payload(event["postback"]["payload"], sender_id)
                     continue
 
-                # 🔹 Si l'utilisateur envoie un message texte
+                # 🔹 Gestion des messages texte
                 if "message" in event and "text" in event["message"]:
                     user_message = event["message"]["text"]
 
@@ -61,7 +61,6 @@ def handle_messages():
                     show_typing_indicator(sender_id)
                     user_last_activity[sender_id] = time.time()
 
-                    # Réponse différée
                     def delayed_response():
                         bot_reply = get_ai_response(user_message)
                         stop_typing_indicator(sender_id)
@@ -71,6 +70,12 @@ def handle_messages():
 
         return "EVENT_RECEIVED", 200
     return "Not Found", 404
+
+# ✅ Gestion des postbacks
+def handle_payload(payload, sender_id):
+    if payload == "GET_STARTED_PAYLOAD":
+        send_message(sender_id, "👋 Bienvenue ! Je suis là pour vous aider.")
+        send_message(sender_id, "Tapez 'help' pour voir ce que je peux faire.")
 
 # ✅ Message de bienvenue avec bouton et image
 def send_welcome_message(sender_id):
@@ -156,9 +161,6 @@ def set_bot_online_status():
     except Exception as e:
         print("❌ Erreur lors de l'activation du statut En ligne :", e)
 
-# Appeler cette fonction au démarrage du bot
-set_bot_online_status()
-
 # ✅ Envoyer un message à l'API Messenger
 def send_message_to_facebook(message_data):
     try:
@@ -172,7 +174,7 @@ def send_message_to_facebook(message_data):
 def setup_messenger_profile():
     url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
     payload = {
-        "get_started": {"payload": "GET_STARTED"},
+        "get_started": {"payload": "GET_STARTED_PAYLOAD"},
         "greeting": [
             {
                 "locale": "default",
@@ -214,6 +216,6 @@ def check_user_activity():
 Thread(target=check_user_activity, daemon=True).start()
 
 if __name__ == "__main__":
-    setup_messenger_profile()  # Active le bouton "Démarrer" et le message de bienvenue
+    setup_messenger_profile()  # Active le bouton "Démarrer"
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
