@@ -8,7 +8,7 @@ from threading import Thread
 app = Flask(__name__)
 
 # 🔹 Configuration des tokens
-PAGE_ACCESS_TOKEN = "TON_TOKEN_FACEBOOK"
+PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBOZB0cyaknxbJGMYmdI5r4pnUma5ZAZBMZCVnrRJMkutMOTRu9vUr30I6JfOnmNb7ETP55fw9xDOxMgbWYrYTYiKefuZAgZCFlkKECKLrwI4QBtVrebM9htmuZAyenck4Sb1oI1DKFW58hJfrnVrn30H4zebwvCIq4BO29XfxvybhtXlHlO3uFcKDwZDZD"
 VERIFY_TOKEN = "openofficeweb"
 
 # 🔹 Messages aléatoires après 1h d'inactivité
