@@ -8,7 +8,7 @@ from threading import Thread
 app = Flask(__name__)
 
 # 🔹 Configuration des tokens
-PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBOZB0cyaknxbJGMYmdI5r4pnUma5ZAZBMZCVnrRJMkutMOTRu9vUr30I6JfOnmNb7ETP55fw9xDOxMgbWYrYTYiKefuZAgZCFlkKECKLrwI4QBtVrebM9htmuZAyenck4Sb1oI1DKFW58hJfrnVrn30H4zebwvCIq4BO29XfxvybhtXlHlO3uFcKDwZDZD"
+PAGE_ACCESS_TOKEN = "EAGWp4PDBMf4BO9fRf3izdRm2OCFoQB5cL2WBUG8rOaU8qLGSmVVP5AfP0xR9fgZCtPuvPc5X8z2YCk03ZC2yUYuCAeeEPZBV3Kl78RAS8FwgZAzQ8zDKTPBWV5DyX140G0mqeefFvXpxjLdf2ZAq0prNYIJhHmOIeNNZBLZBK8Ozm0tCBQMtsQksPvk1PLGurg30AZDZD"
 VERIFY_TOKEN = "openofficeweb"
 
 # 🔹 Messages aléatoires après 1h d'inactivité
