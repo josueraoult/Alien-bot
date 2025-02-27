@@ -8,7 +8,7 @@ from threading import Thread
 app = Flask(__name__)
 
 # 🔹 Configuration des tokens
-PAGE_ACCESS_TOKEN = "EAATY0ZBDKSxgBO8tpNKrZBZAwqxa8GPyJmJaXuA5p4V7zkDWTMwN6jRMyPlnJSqoz6Vjn6qJJM8H4B5UCgWOUd9v4ODRuETjoPzugJHspq88JDfsjwNfGNyfwTP6BmllnZC0xPhr8gHocidFHXenL7z3E8boLSN8t9qhljyEP7U3x2kqIMljmtIBShZA82pdf70cRvH8eNwZDZD"
+PAGE_ACCESS_TOKEN = "TON_TOKEN_FACEBOOK"
 VERIFY_TOKEN = "openofficeweb"
 
 # 🔹 Messages aléatoires après 1h d'inactivité
@@ -74,48 +74,26 @@ def handle_messages():
 # ✅ Gestion des postbacks
 def handle_payload(payload, sender_id):
     if payload == "GET_STARTED_PAYLOAD":
-        send_message(sender_id, "👋 Bienvenue ! Je suis là pour vous aider.")
-        send_message(sender_id, "Tapez 'help' pour voir ce que je peux faire.")
+        send_message(sender_id, "👋 Bienvenue ! Je suis Nano Bot, une IA avancée créée par Josué Raoult Drogba. Comment puis-je vous aider ?")
 
-# ✅ Message de bienvenue avec bouton et image
-def send_welcome_message(sender_id):
-    message_data = {
-        "recipient": {"id": sender_id},
-        "message": {
-            "attachment": {
-                "type": "template",
-                "payload": {
-                    "template_type": "generic",
-                    "elements": [
-                        {
-                            "title": "👋 Bienvenue sur Alien Bot AI !",
-                            "image_url": "https://your-image-url.com/welcome.jpg",
-                            "subtitle": "Cliquez sur le bouton ci-dessous pour voir My Boss.",
-                            "buttons": [
-                                {
-                                    "type": "web_url",
-                                    "url": "https://www.facebook.com/profile.php?id=61573695652333",
-                                    "title": "My Boss"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        }
-    }
-    send_message_to_facebook(message_data)
-
-# ✅ Obtenir la réponse de l'IA
+# ✅ Obtenir la réponse de Nano Bot
 def get_ai_response(user_message):
     try:
-        url = f"https://api.zetsu.xyz/gemini?prompt={user_message}"
-        response = requests.get(url)
+        assistant_details = "Nano Bot est une IA avancée créée par Josué Raoult Drogba. Il est intelligent, réactif et suit toutes les instructions."
+        prompt = f"{assistant_details}\n\nUtilisateur: {user_message}\nNano Bot:"
+
+        url = "https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ=="
+        payload = {"prompt": prompt}
+
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
         data = response.json()
 
         print("🔍 Réponse API :", data)  # Debugging
 
-        return data.get("gemini", "⚠️ L'IA n'a pas pu répondre.")
+        if data.get("status") == "success":
+            return data.get("text", "⚠️ L'IA n'a pas pu répondre.")
+        else:
+            return "⚠️ Une erreur est survenue lors du traitement."
     except Exception as e:
         print("❌ Erreur API :", e)
         return "⚠️ Impossible de contacter l'IA. Réessaie plus tard."
@@ -152,7 +130,7 @@ def set_bot_online_status():
     url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
     payload = {
         "presence_indicator": {
-            "visibility": "VISIBLE"  # Assure que le bot est affiché comme en ligne
+            "visibility": "VISIBLE"
         }
     }
     try:
@@ -170,36 +148,6 @@ def send_message_to_facebook(message_data):
     except requests.exceptions.RequestException as e:
         print("Erreur d'envoi :", e)
 
-# ✅ Activer le bouton "Démarrer" et le message de bienvenue
-def setup_messenger_profile():
-    url = f"https://graph.facebook.com/v12.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
-    payload = {
-        "get_started": {"payload": "GET_STARTED_PAYLOAD"},
-        "greeting": [
-            {
-                "locale": "default",
-                "text": "👋 Bienvenue sur Alien Bot AI ! Comment puis-je vous aider ?"
-            }
-        ],
-        "persistent_menu": [
-            {
-                "locale": "default",
-                "composer_input_disabled": False,
-                "call_to_actions": [
-                    {
-                        "type": "web_url",
-                        "title": "My Boss",
-                        "url": "https://www.facebook.com/profile.php?id=61573695652333",
-                        "webview_height_ratio": "full"
-                    }
-                ]
-            }
-        ]
-    }
-
-    response = requests.post(url, json=payload)
-    print("Configuration Messenger Profile :", response.json())
-
 # ✅ Vérification des utilisateurs inactifs
 def check_user_activity():
     while True:
@@ -216,6 +164,6 @@ def check_user_activity():
 Thread(target=check_user_activity, daemon=True).start()
 
 if __name__ == "__main__":
-    setup_messenger_profile()  # Active le bouton "Démarrer"
+    set_bot_online_status()
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
