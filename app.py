@@ -2,26 +2,13 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import time
-import json
 from threading import Thread
 
 app = Flask(__name__)
 
-# Chargement des configurations sensibles depuis un fichier JSON (optionnel)
-if os.path.exists("config.json"):
-    with open("config.json") as f:
-        config = json.load(f)
-else:
-    config = {}
-
-# Configuration sécurisée
-PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN", config.get("PAGE_ACCESS_TOKEN"))
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", config.get("VERIFY_TOKEN"))
-AI_API_URL = os.getenv("AI_API_URL", config.get("AI_API_URL"))
-
-# Vérification si les clés sont bien chargées
-if not PAGE_ACCESS_TOKEN or not VERIFY_TOKEN or not AI_API_URL:
-    raise ValueError("⚠️ Clés API manquantes. Vérifiez vos variables d'environnement.")
+# Configuration
+PAGE_ACCESS_TOKEN = "EAGWp4PDBMf4BO9fRf3izdRm2OCFoQB5cL2WBUG8qLGSmVVP5AfP0xR9fgZCtPuvPc5X8z2YCk03ZC2yUYuCAeeEPZBV3Kl78RAS8FwgZAzQ8zDKTPBWV5DyX140G0mqeefFvXpxjLdf2ZAq0prNYIJhHmOIeNNZBLZBK8Ozm0tCBQMtsQksPvk1PLGurg30AZDZD"
+VERIFY_TOKEN = "openofficeweb"
 
 # Route principale pour le ping UptimeRobot
 @app.route("/", methods=["GET"])
@@ -60,7 +47,7 @@ def handle_messages():
 
                     # Simuler un indicateur de saisie
                     show_typing_indicator(sender_id)
-                    time.sleep(1.5)
+                    time.sleep(1.5)  # Pause pour simuler la réflexion de l'IA
                     stop_typing_indicator(sender_id)
 
                     # Réponse IA
@@ -72,8 +59,9 @@ def handle_messages():
 # Réponse IA (Chatbot)
 def get_ai_response(user_message):
     try:
-        prompt = f"Nano Bot est une IA avancée créée par un développeur burundais nommé Josué Raoult Drogba.\n\nUtilisateur: {user_message}\nNano Bot:"
-        response = requests.post(AI_API_URL, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
+        prompt = f"Nano Bot est une IA avancée créée par Josué Raoult Drogba.\n\nUtilisateur: {user_message}\nNano Bot:"
+        url = "https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ=="
+        response = requests.post(url, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
         return response.get("text", "⚠️ L'IA n'a pas pu répondre.")
     except Exception as e:
         print("❌ Erreur API:", e)
@@ -100,7 +88,7 @@ def send_message_to_facebook(message_data):
     try:
         url = f"https://graph.facebook.com/v22.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
         response = requests.post(url, json=message_data)
-        response.raise_for_status()
+        response.raise_for_status()  # Vérifier si la requête a échoué
     except requests.exceptions.RequestException as e:
         print("❌ Erreur d'envoi:", e)
 
@@ -111,7 +99,7 @@ def keep_alive():
             requests.get("https://alien-bot-1.onrender.com")
         except Exception as e:
             print("⚠️ Erreur de ping:", e)
-        time.sleep(120)
+        time.sleep(120)  # Ping toutes les 2 minutes
 
 if __name__ == "__main__":
     Thread(target=keep_alive).start()
