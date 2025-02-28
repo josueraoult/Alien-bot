@@ -3,52 +3,32 @@ import requests
 import os
 import time
 import json
-import random
 from threading import Thread
 
 app = Flask(__name__)
 
-# ✅ Configuration
-PAGE_ACCESS_TOKEN = "EAGWp4PDBMf4BO9fRf3izdRm2OCFoQB5cL2WBUG8qLGSmVVP5AfP0xR9fgZCtPuvPc5X8z2YCk03ZC2yUYuCAeeEPZBV3Kl78RAS8FwgZAzQ8zDKTPBWV5DyX140G0mqeefFvXpxjLdf2ZAq0prNYIJhHmOIeNNZBLZBK8Ozm0tCBQMtsQksPvk1PLGurg30AZDZD"
-VERIFY_TOKEN = "openofficeweb"
+# Chargement des configurations sensibles depuis un fichier JSON (optionnel)
+if os.path.exists("config.json"):
+    with open("config.json") as f:
+        config = json.load(f)
+else:
+    config = {}
 
-# ✅ Fonction pour envoyer un message avec des boutons
-def send_button_message(sender_id):
-    message_data = {
-        "recipient": {"id": sender_id},
-        "message": {
-            "text": "Here are your options:",
-            "quick_replies": [
-                {
-                    "content_type": "text",
-                    "title": "Check Profile",
-                    "payload": "CHECK_PROFILE_PAYLOAD",
-                },
-                {
-                    "content_type": "text",
-                    "title": "Say Hello",
-                    "payload": "HELLO_PAYLOAD",
-                },
-            ],
-        },
-    }
-    send_message_to_facebook(message_data)
+# Configuration sécurisée
+PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN", config.get("PAGE_ACCESS_TOKEN"))
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", config.get("VERIFY_TOKEN"))
+AI_API_URL = os.getenv("AI_API_URL", config.get("AI_API_URL"))
 
-# ✅ Envoi du message via Messenger API
-def send_message_to_facebook(message_data):
-    try:
-        url = f"https://graph.facebook.com/v12.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
-        response = requests.post(url, json=message_data)
-        response.raise_for_status()  # Raise an error if the request failed
-    except requests.exceptions.RequestException as e:
-        print("❌ Erreur d'envoi:", e)
+# Vérification si les clés sont bien chargées
+if not PAGE_ACCESS_TOKEN or not VERIFY_TOKEN or not AI_API_URL:
+    raise ValueError("⚠️ Clés API manquantes. Vérifiez vos variables d'environnement.")
 
-# ✅ Route principale
+# Route principale pour le ping UptimeRobot
 @app.route("/", methods=["GET"])
 def home():
     return "🚀 Nano Bot fonctionne !"
 
-# ✅ Vérification du webhook Messenger
+# Vérification du webhook Messenger
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
@@ -59,7 +39,7 @@ def verify_webhook():
         return challenge, 200
     return "Forbidden", 403
 
-# ✅ Gestion des événements Messenger
+# Gestion des messages Messenger
 @app.route("/webhook", methods=["POST"])
 def handle_messages():
     body = request.get_json()
@@ -69,53 +49,42 @@ def handle_messages():
             for event in entry.get("messaging", []):
                 sender_id = event["sender"]["id"]
 
-                # ✅ Gestion du bouton "Démarrer"
-                if event.get("postback") and "payload" in event["postback"]:
-                    handle_payload(event["postback"]["payload"], sender_id)
+                # Gestion du bouton "Démarrer forcé"
+                if event.get("postback") and event["postback"].get("payload") == "GET_STARTED_PAYLOAD":
+                    send_message(sender_id, "👋 Bienvenue ! Je suis Nano Bot, une IA avancée. Comment puis-je vous aider ?")
                     continue
 
-                # ✅ Gestion des messages texte
+                # Gestion des messages texte
                 if "message" in event and "text" in event["message"]:
                     user_message = event["message"]["text"]
 
-                    # ✅ Envoi d'un message avec des boutons si le message est "show buttons"
-                    if user_message.lower() == "show buttons":
-                        send_button_message(sender_id)
-                        continue
+                    # Simuler un indicateur de saisie
+                    show_typing_indicator(sender_id)
+                    time.sleep(1.5)
+                    stop_typing_indicator(sender_id)
 
+                    # Réponse IA
+                    ai_response = get_ai_response(user_message)
+                    send_message(sender_id, ai_response)
         return "EVENT_RECEIVED", 200
     return "Not Found", 404
 
-# ✅ Réponse IA (Chatbot)
+# Réponse IA (Chatbot)
 def get_ai_response(user_message):
     try:
-        prompt = f"Nano Bot est une IA avancée créée par Josué Raoult Drogba.\n\nUtilisateur: {user_message}\nNano Bot:"
-        url = "https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0..."
-        response = requests.post(url, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
-
+        prompt = f"Nano Bot est une IA avancée créée par un développeur burundais nommé Josué Raoult Drogba.\n\nUtilisateur: {user_message}\nNano Bot:"
+        response = requests.post(AI_API_URL, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
         return response.get("text", "⚠️ L'IA n'a pas pu répondre.")
     except Exception as e:
         print("❌ Erreur API:", e)
         return "⚠️ Impossible de contacter l'IA."
 
-# ✅ Gestion du bouton "Démarrer"
-def handle_payload(payload, sender_id):
-    if payload == "GET_STARTED_PAYLOAD":
-        send_message(sender_id, "👋 Bienvenue ! Je suis Nano Bot, une IA avancée. Comment puis-je vous aider ?")
-    elif payload == "HELLO_PAYLOAD":
-        send_message(sender_id, "👋 Hello! Comment puis-je vous assister aujourd'hui ?")
-    elif payload == "CHECK_PROFILE_PAYLOAD":
-        send_message(sender_id, "Voici mon profil: https://www.facebook.com/yandeva.me")
-
-# ✅ Envoi d'un message simple
+# Envoi d'un message simple
 def send_message(sender_id, text):
     message_data = {"recipient": {"id": sender_id}, "message": {"text": text}}
     send_message_to_facebook(message_data)
 
-# ✅ Actions utilisateur (vu, écriture...)
-def mark_message_as_seen(sender_id):
-    send_action(sender_id, "mark_seen")
-
+# Actions utilisateur (vu, écriture...)
 def show_typing_indicator(sender_id):
     send_action(sender_id, "typing_on")
 
@@ -126,6 +95,25 @@ def send_action(sender_id, action):
     message_data = {"recipient": {"id": sender_id}, "sender_action": action}
     send_message_to_facebook(message_data)
 
+# Fonction pour envoyer un message via Messenger API
+def send_message_to_facebook(message_data):
+    try:
+        url = f"https://graph.facebook.com/v22.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
+        response = requests.post(url, json=message_data)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print("❌ Erreur d'envoi:", e)
+
+# Ping automatique pour garder le bot en ligne
+def keep_alive():
+    while True:
+        try:
+            requests.get("https://alien-bot-1.onrender.com")
+        except Exception as e:
+            print("⚠️ Erreur de ping:", e)
+        time.sleep(120)
+
 if __name__ == "__main__":
+    Thread(target=keep_alive).start()
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
