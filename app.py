@@ -59,7 +59,7 @@ def handle_messages():
 # Réponse IA (Chatbot)
 def get_ai_response(user_message):
     try:
-        prompt = f"Nano Bot est une IA avancée créée par Josué Raoult Drogba.\n\nUtilisateur: {user_message}\nNano Bot:"
+        prompt = f"CHATBOT V3, modèle GPT4-0 LITE,l’IA ultime parlant avec emoji,les esprits des plus grands modèles intelligents du monde. 🚀 Pose-moi une question et reçois une réponse précise, logique et réaliste. 🤖.\n\nUtilisateur: {user_message}\nChat Bot:"
         url = "https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ=="
         response = requests.post(url, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
         return response.get("text", "⚠️ L'IA n'a pas pu répondre.")
