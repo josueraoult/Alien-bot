@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import time
-from threading import Thread
 
 app = Flask(__name__)
 
@@ -59,7 +58,10 @@ def handle_messages():
 # Réponse IA (Chatbot)
 def get_ai_response(user_message):
     try:
-        prompt = f"CHATBOT V3, modèle GPT4-0 LITE,l’IA ultime parlant avec emoji,les esprits des plus grands modèles intelligents du monde. 🚀 Pose-moi une question et reçois une réponse précise, logique et réaliste. 🤖.\n\nUtilisateur: {user_message}\nChat Bot:"
+        prompt = (
+            f"CHATBOT V3, modèle GPT4-0 LITE,l’IA ultime parlant avec emoji,les esprits des plus grands modèles intelligents du monde. 🚀 "
+            f"Pose-moi une question et reçois une réponse précise, logique et réaliste. 🤖.\n\nUtilisateur: {user_message}\nChat Bot:"
+        )
         url = "https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm5HUEtMSjJkakVjcF9IQ0M0VFhRQ0FmSnNDSHNYTlJSblE0UXo1Q3RBcjFPcl9YYy1OZUhteDZWekxHdWRLM1M1alNZTkJMWEhNOWd4S1NPSDBTWC12M0U2UGc9PQ=="
         response = requests.post(url, json={"prompt": prompt}, headers={"Content-Type": "application/json"}).json()
         return response.get("text", "⚠️ L'IA n'a pas pu répondre.")
@@ -92,16 +94,6 @@ def send_message_to_facebook(message_data):
     except requests.exceptions.RequestException as e:
         print("❌ Erreur d'envoi:", e)
 
-# Ping automatique pour garder le bot en ligne
-def keep_alive():
-    while True:
-        try:
-            requests.get("https://alien-bot-1.onrender.com")
-        except Exception as e:
-            print("⚠️ Erreur de ping:", e)
-        time.sleep(120)  # Ping toutes les 2 minutes
-
 if __name__ == "__main__":
-    Thread(target=keep_alive).start()
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
